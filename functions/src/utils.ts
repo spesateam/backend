@@ -1,30 +1,24 @@
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
+import axios from "axios";
+import * as util from "util";
 
-type DocumentSnapshot = admin.firestore.DocumentSnapshot;
-
-admin.initializeApp();
-const db = admin.firestore();
-
-const toSnakeCase = (someString: string) => {
-  return someString
-    .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
-    .map(x => x.toLowerCase())
-    .join("_");
+export const toSnakeCase = (someString: string) => {
+    const match = someString
+        .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g);
+    if (match)
+        return match
+            .map(x => x.toLowerCase())
+            .join("_");
+    else return null;
 };
 
-/*
-  Function that will copy a record to a /{collection}/city/{city}/{reference} collection
-  Usage: moveRecordToCityCollection(documentSnapshot, "collection")
-
-*/
-const moveRecordToCityCollection = async (
-  record: DocumentSnapshot,
-  collection: string
-) => {
-  const recordData = record.data();
-  const city = toSnakeCase(recordData.city);
-  db.doc(`/${collection}/city/${city}/${record.ref.id}`).set(recordData);
+export const getCitySlug = async (placeId: string) => {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?language=en&place_id=${placeId}&key=AIzaSyBBPzPNuYM7Qws4N1JvEGIRgZCa8xvuJNo`;
+    const response = await axios.get(url);
+    const cityArr = response.data.results[0].address_components.filter((item: any) => item.types.includes("locality"));
+    const city = toSnakeCase(cityArr[0].short_name);
+    console.log(util.inspect(response.data.results, true, 20, true));
+    console.log(city);
+    return city;
 };
 
-export { moveRecordToCityCollection };
+// getCitySlug("ChIJPXupDrb8hkcRm8JyxGbdVmU");
